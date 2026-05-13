@@ -1,0 +1,1752 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouRoom Music</title>
+<link href="https://fonts.googleapis.com/css2?family=Circular+Std:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green: #1db954;
+  --green-dim: #1aa34a;
+  --bg: #0a0a0a;
+  --surface: #121212;
+  --surface2: #1a1a1a;
+  --surface3: #242424;
+  --surface4: #2a2a2a;
+  --text: #ffffff;
+  --text-dim: #b3b3b3;
+  --text-muted: #535353;
+  --radius: 8px;
+  --player-h: 90px;
+  --nav-h: 72px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* LAYOUT */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* MAIN SCROLL AREA */
+.scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: calc(var(--player-h) + var(--nav-h) + 20px);
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface4) transparent;
+}
+
+.scroll-area::-webkit-scrollbar { width: 6px; }
+.scroll-area::-webkit-scrollbar-thumb { background: var(--surface4); border-radius: 3px; }
+
+/* BOTTOM NAV */
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: var(--nav-h);
+  background: var(--surface);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  z-index: 100;
+}
+
+.nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.nav-btn.active { color: var(--text); }
+
+.nav-btn svg { width: 24px; height: 24px; }
+
+/* MINI PLAYER */
+.mini-player {
+  position: fixed;
+  bottom: var(--nav-h);
+  left: 8px; right: 8px;
+  height: var(--player-h);
+  background: #282828;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 12px;
+  z-index: 99;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.mini-player.visible { opacity: 1; pointer-events: all; }
+
+.mini-player::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--text-muted);
+  border-radius: 1px;
+}
+
+.mini-progress {
+  position: absolute;
+  bottom: 0; left: 0;
+  height: 2px;
+  background: var(--green);
+  border-radius: 1px;
+  width: 0%;
+  transition: width 0.5s linear;
+}
+
+.mini-cover {
+  width: 56px; height: 56px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.mini-info { flex: 1; min-width: 0; }
+
+.mini-title {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-artist {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.mini-controls { display: flex; align-items: center; gap: 8px; }
+
+.mini-btn {
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  transition: background 0.15s;
+}
+
+.mini-btn:hover { background: rgba(255,255,255,0.1); }
+
+.mini-btn.play-btn {
+  background: var(--text);
+  color: var(--bg);
+  width: 36px; height: 36px;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+}
+
+.mini-btn.play-btn:hover { background: #e0e0e0; transform: scale(1.05); }
+
+/* PAGES */
+.page { display: none; }
+.page.active { display: block; }
+
+/* HOME PAGE */
+.home-header {
+  padding: 60px 24px 24px;
+  background: linear-gradient(180deg, #1a2a1a 0%, transparent 100%);
+}
+
+.home-greeting {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.home-sub { font-size: 14px; color: var(--text-dim); }
+
+.section-title {
+  font-size: 22px;
+  font-weight: 700;
+  padding: 24px 24px 16px;
+}
+
+.quick-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 0 24px;
+}
+
+.quick-item {
+  background: var(--surface3);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: background 0.15s;
+  height: 64px;
+}
+
+.quick-item:hover { background: var(--surface4); }
+
+.quick-item img {
+  width: 64px; height: 64px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.quick-item-name {
+  font-size: 13px;
+  font-weight: 700;
+  padding-right: 12px;
+  line-height: 1.3;
+}
+
+/* SEARCH PAGE */
+.search-header {
+  padding: 60px 24px 16px;
+}
+
+.search-header h1 { font-size: 28px; font-weight: 700; margin-bottom: 16px; }
+
+.search-input-wrap {
+  position: relative;
+}
+
+.search-input-wrap svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--bg);
+  width: 18px; height: 18px;
+}
+
+#searchInput {
+  width: 100%;
+  padding: 14px 14px 14px 44px;
+  border-radius: 6px;
+  border: none;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 15px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  outline: none;
+}
+
+#searchInput::placeholder { color: #6a6a6a; }
+
+.browse-title { font-size: 16px; font-weight: 700; padding: 24px 24px 16px; }
+
+.browse-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 0 24px;
+}
+
+.browse-card {
+  height: 100px;
+  border-radius: 10px;
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.15s;
+}
+
+.browse-card:hover { transform: scale(0.98); }
+
+.browse-card.songs { background: linear-gradient(135deg, #1db954, #0a7a33); }
+.browse-card.artists { background: linear-gradient(135deg, #4a90e2, #1a3a6e); }
+
+.browse-card-label {
+  position: absolute;
+  bottom: 14px; left: 16px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.browse-card-icon {
+  position: absolute;
+  right: -8px; bottom: -8px;
+  font-size: 64px;
+  opacity: 0.4;
+  transform: rotate(15deg);
+}
+
+/* SEARCH RESULTS */
+.search-results { padding: 0 0 16px; }
+
+.results-section { margin-bottom: 24px; }
+
+.results-title {
+  font-size: 18px;
+  font-weight: 700;
+  padding: 0 24px 12px;
+}
+
+/* COLLECTION PAGE */
+.collection-header {
+  padding: 60px 24px 24px;
+}
+
+.collection-header h1 { font-size: 28px; font-weight: 700; }
+
+.filter-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 24px 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.filter-tabs::-webkit-scrollbar { display: none; }
+
+.filter-tab {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: none;
+  background: var(--surface3);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.filter-tab.active { background: var(--text); color: var(--bg); }
+
+/* SONG LIST ITEMS */
+.song-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 24px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.song-item:hover { background: rgba(255,255,255,0.07); }
+.song-item.playing { background: rgba(29,185,84,0.08); }
+
+.song-item-num {
+  width: 24px;
+  text-align: right;
+  font-size: 14px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.song-item.playing .song-item-num { color: var(--green); }
+
+.song-item-cover {
+  width: 48px; height: 48px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.song-item-info { flex: 1; min-width: 0; }
+
+.song-item-title {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.song-item.playing .song-item-title { color: var(--green); }
+
+.song-item-artist {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.song-item-fav {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 8px;
+  font-size: 16px;
+  transition: color 0.15s, transform 0.15s;
+  flex-shrink: 0;
+}
+
+.song-item-fav.active { color: var(--green); }
+.song-item-fav:hover { transform: scale(1.2); }
+
+/* ARTIST CARDS - HORIZONTAL SCROLL */
+.artists-scroll {
+  display: flex;
+  gap: 16px;
+  padding: 0 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.artists-scroll::-webkit-scrollbar { display: none; }
+
+.artist-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  width: 90px;
+  transition: transform 0.15s;
+}
+
+.artist-chip:hover { transform: scale(1.05); }
+
+.artist-chip img {
+  width: 90px; height: 90px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.artist-chip-name {
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* FULL ARTIST PAGE */
+.artist-page-header {
+  position: relative;
+  height: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 24px;
+}
+
+.artist-page-header img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.artist-page-header::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 20%, rgba(0,0,0,0.8) 70%, var(--bg) 100%);
+}
+
+.artist-page-name {
+  position: relative;
+  z-index: 1;
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.artist-page-back {
+  position: absolute;
+  top: 50px; left: 16px;
+  z-index: 2;
+  background: rgba(0,0,0,0.5);
+  border: none;
+  color: white;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+/* NOW PLAYING */
+.now-playing-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+  overflow: hidden;
+}
+
+.now-playing-screen.open { transform: translateY(0); }
+
+.np-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  z-index: -1;
+}
+
+.np-bg-blur {
+  position: absolute;
+  inset: -20%;
+  opacity: 0.3;
+  filter: blur(60px);
+  z-index: -1;
+  background-size: cover;
+  background-position: center;
+  transition: background 1s;
+}
+
+.np-header {
+  display: flex;
+  align-items: center;
+  padding: 56px 24px 16px;
+  gap: 12px;
+}
+
+.np-down-btn {
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  padding: 8px;
+  margin-right: auto;
+  display: flex;
+}
+
+.np-context { font-size: 12px; color: var(--text-dim); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; flex: 1; text-align: center; }
+
+.np-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0 32px;
+  overflow: hidden;
+}
+
+.np-cover-wrap {
+  flex-shrink: 0;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 1;
+  margin-bottom: 32px;
+}
+
+.np-cover {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.6);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.np-cover.playing { transform: scale(1.0); }
+.np-cover.paused { transform: scale(0.88); }
+
+.np-info {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+  gap: 12px;
+}
+
+.np-info-text { flex: 1; min-width: 0; }
+
+.np-title {
+  font-size: 22px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.np-artist { font-size: 15px; color: var(--text-dim); margin-top: 4px; }
+
+.np-fav {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  transition: transform 0.2s;
+  padding: 8px;
+}
+
+.np-fav:hover { transform: scale(1.2); }
+
+/* PROGRESS */
+.np-progress-wrap {
+  margin-bottom: 20px;
+}
+
+.np-progress-bar {
+  height: 4px;
+  background: var(--surface4);
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.np-progress-fill {
+  height: 100%;
+  background: var(--text);
+  border-radius: 2px;
+  width: 0%;
+  position: relative;
+  transition: width 0.5s linear;
+}
+
+.np-progress-fill::after {
+  content: '';
+  position: absolute;
+  right: -6px; top: 50%;
+  transform: translateY(-50%);
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--text);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.np-progress-bar:hover .np-progress-fill::after { opacity: 1; }
+.np-progress-bar:hover .np-progress-fill { background: var(--green); }
+
+.np-times {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+/* CONTROLS */
+.np-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.np-ctrl-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  transition: color 0.15s, transform 0.1s;
+}
+
+.np-ctrl-btn:hover { color: var(--text); transform: scale(1.1); }
+
+.np-play-btn {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: var(--text);
+  border: none;
+  color: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.np-play-btn:hover { transform: scale(1.06); background: #e8e8e8; }
+.np-play-btn:active { transform: scale(0.95); }
+
+/* LYRICS IN NOW PLAYING */
+.np-lyrics-section {
+  margin-top: 8px;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.np-lyrics-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.np-lyrics-scroll {
+  max-height: 160px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -webkit-mask: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+  mask: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+}
+
+.np-lyrics-scroll::-webkit-scrollbar { display: none; }
+
+.lyric-line {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 8px 0;
+  transition: color 0.3s, transform 0.3s;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.lyric-line.active {
+  color: var(--text);
+  transform: scale(1.03);
+  transform-origin: left;
+}
+
+.no-lyrics {
+  font-size: 14px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* CARD PAGES (songs list, artist list) */
+.card-page {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 150;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.card-page.open {
+  display: flex;
+  transform: translateX(0);
+}
+
+.card-page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 56px 16px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+
+.card-back-btn {
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  transition: transform 0.15s;
+}
+
+.card-back-btn:hover { transform: scale(1.1); }
+
+.card-page-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.card-page-search {
+  padding: 12px 16px;
+  flex-shrink: 0;
+}
+
+.card-search-input {
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: none;
+  background: var(--surface3);
+  color: var(--text);
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+}
+
+.card-search-input::placeholder { color: var(--text-muted); }
+
+.card-page-list {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface4) transparent;
+  padding-bottom: 16px;
+}
+
+/* ARTIST GRID IN CARD PAGE */
+.artist-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+  padding: 16px;
+}
+
+.artist-grid-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.artist-grid-item:hover { transform: scale(1.05); }
+
+.artist-grid-img {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.artist-grid-name {
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.3;
+  color: var(--text);
+}
+
+/* EMPTY */
+.empty-state {
+  text-align: center;
+  padding: 80px 32px;
+  color: var(--text-muted);
+}
+
+.empty-icon { font-size: 64px; margin-bottom: 20px; display: block; opacity: 0.5; }
+.empty-title { font-size: 22px; font-weight: 700; color: var(--text-dim); margin-bottom: 10px; }
+.empty-text { font-size: 14px; line-height: 1.6; }
+
+/* HIDDEN AUDIO */
+audio { display: none; }
+
+/* EQUALIZER ANIMATION */
+@keyframes eq1 { 0%,100%{height:4px} 50%{height:16px} }
+@keyframes eq2 { 0%,100%{height:12px} 50%{height:4px} }
+@keyframes eq3 { 0%,100%{height:8px} 50%{height:20px} }
+
+.eq-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 20px;
+}
+
+.eq-bar {
+  width: 3px;
+  background: var(--green);
+  border-radius: 2px;
+  animation-duration: 0.8s;
+  animation-iteration-count: infinite;
+}
+
+.eq-bar:nth-child(1) { animation-name: eq1; }
+.eq-bar:nth-child(2) { animation-name: eq2; animation-delay: 0.1s; }
+.eq-bar:nth-child(3) { animation-name: eq3; animation-delay: 0.2s; }
+
+.eq-bars.paused .eq-bar { animation-play-state: paused; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- SCROLL AREA -->
+  <div class="scroll-area" id="scrollArea">
+
+    <!-- HOME PAGE -->
+    <div id="homePage" class="page active">
+      <div class="home-header">
+        <div class="home-greeting">Selamat Malam 👋</div>
+        <div class="home-sub">Apa yang ingin kamu dengarkan?</div>
+      </div>
+
+      <div class="section-title">Koleksi Cepat</div>
+      <div class="quick-grid" id="quickGrid"></div>
+
+      <div class="section-title" style="margin-top:24px;">Artis</div>
+      <div class="artists-scroll" id="homeArtists"></div>
+
+      <div class="section-title" style="margin-top:24px;">Semua Lagu</div>
+      <div id="homeSongList"></div>
+    </div>
+
+    <!-- SEARCH PAGE -->
+    <div id="searchPage" class="page">
+      <div class="search-header">
+        <h1>Cari</h1>
+        <div class="search-input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input type="text" id="searchInput" placeholder="Lagu, artis...">
+        </div>
+      </div>
+
+      <div id="searchBrowse">
+        <div class="browse-title">Jelajahi</div>
+        <div class="browse-grid">
+          <div class="browse-card songs" onclick="openSongsCard()">
+            <div class="browse-card-label">Lagu</div>
+            <div class="browse-card-icon">♪</div>
+          </div>
+          <div class="browse-card artists" onclick="openArtistsCard()">
+            <div class="browse-card-label">Artis</div>
+            <div class="browse-card-icon">◉</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="searchResults" class="search-results" style="display:none;"></div>
+    </div>
+
+    <!-- COLLECTION PAGE -->
+    <div id="collectionPage" class="page">
+      <div class="collection-header">
+        <h1>Koleksi Kamu</h1>
+      </div>
+      <div class="filter-tabs">
+        <button class="filter-tab active" onclick="filterCollection('all', this)">Semua</button>
+        <button class="filter-tab" onclick="filterCollection('fav', this)">Favorit</button>
+      </div>
+      <div id="collectionList"></div>
+    </div>
+
+  </div>
+
+  <!-- MINI PLAYER -->
+  <div class="mini-player" id="miniPlayer" onclick="openNowPlaying()">
+    <div class="mini-progress" id="miniProgress"></div>
+    <img class="mini-cover" id="miniCover" src="" alt="">
+    <div class="mini-info">
+      <div class="mini-title" id="miniTitle"></div>
+      <div class="mini-artist" id="miniArtist"></div>
+    </div>
+    <div class="mini-controls" onclick="event.stopPropagation()">
+      <button class="mini-btn" onclick="prevSong()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/>
+        </svg>
+      </button>
+      <button class="mini-btn play-btn" id="miniPlayBtn" onclick="togglePlay()">
+        <svg id="miniPlayIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8 5v14l11-7z"/>
+        </svg>
+      </button>
+      <button class="mini-btn" onclick="nextSong()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="homeNavBtn" onclick="showPage('home')">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+      </svg>
+      Beranda
+    </button>
+    <button class="nav-btn" id="searchNavBtn" onclick="showPage('search')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      Cari
+    </button>
+    <button class="nav-btn" id="collectionNavBtn" onclick="showPage('collection')">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z"/>
+      </svg>
+      Koleksi
+    </button>
+  </nav>
+</div>
+
+<!-- SONGS CARD PAGE -->
+<div class="card-page" id="songsCardPage">
+  <div class="card-page-header">
+    <button class="card-back-btn" onclick="closeSongsCard()">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+      </svg>
+    </button>
+    <span class="card-page-title">Semua Lagu</span>
+  </div>
+  <div class="card-page-search">
+    <input class="card-search-input" id="songsCardSearch" placeholder="Cari lagu...">
+  </div>
+  <div class="card-page-list" id="songsCardList"></div>
+</div>
+
+<!-- ARTISTS CARD PAGE -->
+<div class="card-page" id="artistsCardPage">
+  <div class="card-page-header">
+    <button class="card-back-btn" id="artistsBackBtn" onclick="closeArtistsCard()">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+      </svg>
+    </button>
+    <span class="card-page-title" id="artistsCardTitle">Semua Artis</span>
+  </div>
+  <div class="card-page-search" id="artistsSearchWrap">
+    <input class="card-search-input" id="artistsCardSearch" placeholder="Cari artis...">
+  </div>
+  <div class="card-page-list" id="artistsCardList"></div>
+</div>
+
+<!-- NOW PLAYING SCREEN -->
+<div class="now-playing-screen" id="nowPlayingScreen">
+  <div class="np-bg"></div>
+  <div class="np-bg-blur" id="npBgBlur"></div>
+
+  <div class="np-header">
+    <button class="np-down-btn" onclick="closeNowPlaying()">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+      </svg>
+    </button>
+    <div class="np-context" id="npContext">YOUROOM MUSIC</div>
+    <div style="width:40px;"></div>
+  </div>
+
+  <div class="np-body">
+    <div class="np-cover-wrap">
+      <img class="np-cover paused" id="npCover" src="" alt="">
+    </div>
+
+    <div class="np-info">
+      <div class="np-info-text">
+        <div class="np-title" id="npTitle"></div>
+        <div class="np-artist" id="npArtist"></div>
+      </div>
+      <button class="np-fav" id="npFavBtn" onclick="toggleFavFromPlayer()">🤍</button>
+    </div>
+
+    <div class="np-progress-wrap">
+      <div class="np-progress-bar" id="npProgressBar">
+        <div class="np-progress-fill" id="npProgressFill"></div>
+      </div>
+      <div class="np-times">
+        <span id="npCurrent">0:00</span>
+        <span id="npDuration">0:00</span>
+      </div>
+    </div>
+
+    <div class="np-controls">
+      <button class="np-ctrl-btn" onclick="toggleShuffle()" id="shuffleBtn">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>
+        </svg>
+      </button>
+      <button class="np-ctrl-btn" onclick="prevSong()" style="color:var(--text)">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/>
+        </svg>
+      </button>
+      <button class="np-play-btn" id="npPlayBtn" onclick="togglePlay()">
+        <svg id="npPlayIcon" width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M8 5v14l11-7z"/>
+        </svg>
+      </button>
+      <button class="np-ctrl-btn" onclick="nextSong()" style="color:var(--text)">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+        </svg>
+      </button>
+      <button class="np-ctrl-btn" onclick="toggleRepeat()" id="repeatBtn">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="np-lyrics-section">
+      <div class="np-lyrics-label">Lirik</div>
+      <div class="np-lyrics-scroll" id="npLyrics"></div>
+    </div>
+  </div>
+</div>
+
+<audio id="player"></audio>
+
+<script>
+// ===== DATA =====
+const artists = [
+  { name: "Nadhif Basalamah", cover: "Nadhif.image.jpg" },
+  { name: "One Direction", cover: "OneDirection.png" },
+  { name: "Nuca", cover: "Nuca.jpg" },
+];
+
+const songs = [
+  { file: "Bergema sampai selamanya.mp3", title: "Bergema Sampai Selamanya", artist: "Nadhif Basalamah", cover: "Nadhif.image.jpg",
+    lyrics: [
+      {text:"Aku ingin jadi teman nyamanmu",time:7},{text:"Tempat kau hilangkan keluh kesahmu",time:13},
+      {text:"Kita berbincang tak karuan, tanpa beban",time:19},{text:"Dan juga khayalan tentang masa depan",time:25},
+      {text:"Ku tak ingin cepat berlalu (berlalu)",time:33},{text:"Waktu yang kupunya denganmu",time:40},
+      {text:"Kita berdansa dan tertawa, gandeng tangan",time:44},{text:"Semoga bergema sampai selamanya",time:51},
+      {text:"Dunia pasti ada akhirnya",time:58},{text:"Bintang-bintang pun ada umurnya",time:64},
+      {text:"Maka tenang saja, kita di sini berdua",time:71},{text:"Nikmati sementara yang ada",time:81},
+      {text:"Bersandar padaku, taruh di bahuku",time:96},{text:"Relakan semua, bebas semaumu",time:103},
+      {text:"Percayalah, ini sayang terlewatkan",time:109},{text:"Kusampaikan dalam nyanyian, bergema sampai selamanya",time:115},
+      {text:"Dunia pasti ada akhirnya",time:148},{text:"Bintang-bintang pun ada umurnya",time:154},
+      {text:"Maka tenang saja, kita di sini berdua",time:161},{text:"Nikmati sementara yang ada",time:170},
+      {text:"Semoga bergema selamanya",time:202}
+    ]
+  },
+  { file: "Jika kau lelah denganku.mp3", title: "Jika Kau Lelah Denganku", artist: "Nadhif Basalamah", cover: "Nadhif.image.jpg",
+    lyrics: [
+      {text:"Lama tak berkaca aku dan kamu",time:17},{text:"Sama-sama tak kuasa tahan ragu",time:21},
+      {text:"Caraku hidup buatmu tanya padaku",time:25},{text:"Berharap berubah aku dan kamu",time:34},
+      {text:"Pun lelah bertengkar meski selalu",time:38},{text:"Sudah sama-sama berusaha berdua",time:42},
+      {text:"Kujanji padamu",time:51},{text:"Silahkan ambil waktumu",time:55},
+      {text:"Kujanji menunggu",time:59},{text:"Jika kau lelah denganku",time:62},
+      {text:"Istirahat dulu",time:66},{text:"Selama apapun aku tak apa",time:80},
+      {text:"Mungkin sendiri kau bisa semua",time:84},{text:"Tapi tak ada habisnya cari sempurna",time:88},
+      {text:"Daripada kita berkelahi",time:95},{text:"Daripada kita mengakhiri ini",time:99},
+      {text:"Berhenti bukan inginku",time:105},{text:"Kujanji padamu",time:126},
+      {text:"Silahkan ambil waktumu",time:130},{text:"Kujanji menunggu",time:134},
+      {text:"Jika kau lelah denganku",time:137},{text:"Kau pastikan dulu",time:143},
+      {text:"Memang benar ini yang kau mau",time:147},{text:"Kujanji menunggu",time:151},
+      {text:"Jika kau lelah denganku",time:154},{text:"Istirahat dulu",time:158},
+      {text:"Berhenti bukan inginku",time:162},{text:"Hm mm",time:166}
+    ]
+  },
+  { file: "Masih ada waktunya.mp3", title: "Masih Ada Waktunya", artist: "Nadhif Basalamah", cover: "Nadhif.image.jpg",
+    lyrics: [
+      {text:"Katamu ku diperhatikan",time:18},{text:"Setiap ku mengingat-Nya",time:24},
+      {text:"Kau ajari semua berharga",time:31},{text:"Benar salah keputusanmu",time:37},
+      {text:"Semoga kau masih ada waktunya",time:43},{text:"Tuk melihat diriku berguna",time:49},
+      {text:"Karena ku bertanya apa bisa",time:55},{text:"Ku kembalikan yang kau berikan",time:60},
+      {text:"Semoga",time:66},{text:"Caramu melihat dunia",time:84},
+      {text:"Dan segala kotornya",time:90},{text:"Kau jalani tanpa putus asa",time:97},
+      {text:"Dan aku mengaguminya",time:103},{text:"Kau wanita",time:108},
+      {text:"Yang terkuat yang ku tahu",time:111},{text:"Yang terindah",time:115},
+      {text:"Yang doanya selamatkanku",time:118},{text:"Semoga kau masih ada waktunya",time:122},
+      {text:"Tuk melihat diriku berguna",time:128},{text:"Karena ku bertanya apa bisa",time:134},
+      {text:"Ku kembalikan yang kau berikan",time:138},{text:"Semoga",time:144},
+      {text:"Padahal ku tahu",time:149},{text:"Hatimu terluka",time:152},
+      {text:"Kau peluk jiwaku",time:156},{text:"Dengan sukacita",time:159},
+      {text:"Dan jika kau masih tertawa",time:162},{text:"Ku tahu duniaku kan baik saja",time:165},
+      {text:"Semoga kau masih ada waktunya",time:200},{text:"Tuk melihat diriku berguna",time:207},
+      {text:"Karena ku bertanya apa bisa",time:213},{text:"Ku kembalikan yang kau berikan",time:217},
+      {text:"Kau masih ada waktunya",time:231}
+    ]
+  },
+  { file: "Penuh.mp3", title: "Penuh", artist: "Nadhif Basalamah", cover: "Nadhif.image.jpg" },
+  { file: "Sesuatu.mp3", title: "Sesuatu", artist: "Nadhif Basalamah", cover: "Nadhif.image.jpg" },
+  { file: "Semoga kau bisa maafkanku beribu kali.mp3", title: "Semoga Kau Bisa Maafkanku Beribu Kali", artist: "Nadhif Basalamah", cover: "Nadhif.image.jpg" },
+  { file: "Kota ini tak sama tanpamu.mp3", title: "Kota Ini Tak Sama Tanpamu", artist: "Nadhif Basalamah", cover: "Nadhif.image.jpg" },
+  { file: "What Makes You Beautiful.mp3", title: "What Makes You Beautiful", artist: "One Direction", cover: "OneDirection.png" },
+  { file: "Story of My Life.mp3", title: "Story of My Life", artist: "One Direction", cover: "OneDirection.png" },
+  { file: "Night Changes.mp3", title: "Night Changes", artist: "One Direction", cover: "OneDirection.png" },
+  { file: "Best Song Ever.mp3", title: "Best Song Ever", artist: "One Direction", cover: "OneDirection.png" },
+  { file: "Drag Me Down.mp3", title: "Drag Me Down", artist: "One Direction", cover: "OneDirection.png" },
+  { file: "Steal My Girl.mp3", title: "Steal My Girl", artist: "One Direction", cover: "OneDirection.png" },
+  { file: "Perfect.mp3", title: "Perfect", artist: "One Direction", cover: "OneDirection.png" },
+  { file: "Little Things.mp3", title: "Little Things", artist: "One Direction", cover: "OneDirection.png" },
+  { file: "You & I.mp3", title: "You & I", artist: "One Direction", cover: "OneDirection.png" },
+  { file: "History.mp3", title: "History", artist: "One Direction", cover: "OneDirection.png" },
+  { file: "Kiss You.mp3", title: "Kiss You", artist: "One Direction", cover: "OneDirection.png" },
+  { file: "One Thing.mp3", title: "One Thing", artist: "One Direction", cover: "OneDirection.png" },
+  { file: "Live While We're Young.mp3", title: "Live While We're Young", artist: "One Direction", cover: "OneDirection.png" },
+  { file: "Midnight Memories.mp3", title: "Midnight Memories", artist: "One Direction", cover: "OneDirection.png" },
+  { file: "Infinity.mp3", title: "Infinity", artist: "One Direction", cover: "OneDirection.png" },
+  { file: "18.mp3", title: "18", artist: "One Direction", cover: "OneDirection.png" },
+  { file: "Strong.mp3", title: "Strong", artist: "One Direction", cover: "OneDirection.png" },
+  { file: "No Control.mp3", title: "No Control", artist: "One Direction", cover: "OneDirection.png" },
+  { file: "Olivia.mp3", title: "Olivia", artist: "One Direction", cover: "OneDirection.png" },
+  { file: "If I Could Fly.mp3", title: "If I Could Fly", artist: "One Direction", cover: "OneDirection.png" },
+  { file: "Masa Ini Nanti Dan Masa Indah Lainnya.mp3", title: "Masa Ini, Nanti, Dan Masa Indah Lainnya", artist: "Nuca", cover: "Nuca.jpg" },
+];
+
+// ===== STATE =====
+let currentIndex = -1;
+let isPlaying = false;
+let favorites = JSON.parse(localStorage.getItem('yrm_favs') || '[]');
+let shuffle = false;
+let repeat = false;
+let currentLyrics = [];
+let lyricEls = [];
+let currentPage = 'home';
+let npOpen = false;
+let artistsViewMode = 'list'; // 'list' or 'songs'
+let artistsViewArtist = null;
+let currentSongList = songs; // used for prev/next
+
+const player = document.getElementById('player');
+
+// ===== INIT =====
+function init() {
+  updateGreeting();
+  renderQuickGrid();
+  renderHomeArtists();
+  renderHomeSongs();
+  renderCollection('all');
+
+  document.getElementById('songsCardSearch').addEventListener('input', e => {
+    renderSongsCard(e.target.value);
+  });
+
+  document.getElementById('artistsCardSearch').addEventListener('input', e => {
+    if (artistsViewMode === 'list') renderArtistsCard(e.target.value);
+    else renderArtistSongsInCard(artistsViewArtist, e.target.value);
+  });
+
+  document.getElementById('searchInput').addEventListener('input', e => {
+    handleSearch(e.target.value);
+  });
+
+  const npBar = document.getElementById('npProgressBar');
+  npBar.addEventListener('click', e => {
+    const rect = npBar.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    player.currentTime = pct * player.duration;
+  });
+
+  player.addEventListener('timeupdate', onTimeUpdate);
+  player.addEventListener('ended', onSongEnd);
+  player.addEventListener('loadedmetadata', updateDuration);
+}
+
+function updateGreeting() {
+  const h = new Date().getHours();
+  const g = h < 12 ? 'Selamat Pagi' : h < 17 ? 'Selamat Siang' : 'Selamat Malam';
+  document.querySelector('.home-greeting').textContent = `${g} 👋`;
+}
+
+// ===== RENDER HELPERS =====
+function createSongItem(song, index, opts = {}) {
+  const { showNum = false, num, songList } = opts;
+  const isFav = favorites.includes(song.title);
+  const isNowPlaying = currentIndex === index && isPlaying;
+
+  const div = document.createElement('div');
+  div.className = 'song-item' + (currentIndex === index ? ' playing' : '');
+  div.dataset.songIndex = index;
+
+  div.innerHTML = `
+    ${showNum ? `<div class="song-item-num">${isNowPlaying ? '<div class="eq-bars"><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div></div>' : (num || '')}</div>` : ''}
+    <img class="song-item-cover" src="${song.cover}" alt="">
+    <div class="song-item-info">
+      <div class="song-item-title">${song.title}</div>
+      <div class="song-item-artist">${song.artist}</div>
+    </div>
+    <button class="song-item-fav ${isFav ? 'active' : ''}" onclick="event.stopPropagation(); toggleFav('${song.title}', this)">
+      ${isFav ? '💚' : '🤍'}
+    </button>
+  `;
+
+  div.onclick = (e) => {
+    if (e.target.closest('.song-item-fav')) return;
+    currentSongList = songList || songs;
+    playSong(index);
+  };
+
+  return div;
+}
+
+// ===== HOME =====
+function renderQuickGrid() {
+  const grid = document.getElementById('quickGrid');
+  grid.innerHTML = '';
+  artists.forEach(artist => {
+    const item = document.createElement('div');
+    item.className = 'quick-item';
+    item.innerHTML = `<img src="${artist.cover}" alt=""><div class="quick-item-name">${artist.name}</div>`;
+    item.onclick = () => { openArtistsCard(); showArtistSongs(artist); };
+    grid.appendChild(item);
+  });
+}
+
+function renderHomeArtists() {
+  const container = document.getElementById('homeArtists');
+  container.innerHTML = '';
+  artists.forEach(artist => {
+    const chip = document.createElement('div');
+    chip.className = 'artist-chip';
+    chip.innerHTML = `<img src="${artist.cover}" alt=""><div class="artist-chip-name">${artist.name}</div>`;
+    chip.onclick = () => { openArtistsCard(); showArtistSongs(artist); };
+    container.appendChild(chip);
+  });
+}
+
+function renderHomeSongs() {
+  const list = document.getElementById('homeSongList');
+  list.innerHTML = '';
+  songs.forEach((song, i) => {
+    list.appendChild(createSongItem(song, i, { showNum: true, num: i + 1 }));
+  });
+}
+
+// ===== SONGS CARD PAGE =====
+function openSongsCard() {
+  const page = document.getElementById('songsCardPage');
+  page.style.display = 'flex';
+  setTimeout(() => page.classList.add('open'), 10);
+  renderSongsCard();
+}
+
+function closeSongsCard() {
+  const page = document.getElementById('songsCardPage');
+  page.classList.remove('open');
+  setTimeout(() => { page.style.display = 'none'; }, 350);
+}
+
+function renderSongsCard(keyword = '') {
+  const list = document.getElementById('songsCardList');
+  list.innerHTML = '';
+  const filtered = songs.filter(s =>
+    s.title.toLowerCase().includes(keyword.toLowerCase()) ||
+    s.artist.toLowerCase().includes(keyword.toLowerCase())
+  );
+  filtered.forEach((song, i) => {
+    const idx = songs.indexOf(song);
+    list.appendChild(createSongItem(song, idx, { showNum: true, num: i + 1 }));
+  });
+}
+
+// ===== ARTISTS CARD PAGE =====
+function openArtistsCard() {
+  artistsViewMode = 'list';
+  artistsViewArtist = null;
+  document.getElementById('artistsCardTitle').textContent = 'Semua Artis';
+  document.getElementById('artistsCardSearch').placeholder = 'Cari artis...';
+  document.getElementById('artistsCardSearch').value = '';
+  document.getElementById('artistsBackBtn').onclick = closeArtistsCard;
+
+  const page = document.getElementById('artistsCardPage');
+  page.style.display = 'flex';
+  setTimeout(() => page.classList.add('open'), 10);
+  renderArtistsCard();
+}
+
+function closeArtistsCard() {
+  if (artistsViewMode === 'songs') {
+    artistsViewMode = 'list';
+    artistsViewArtist = null;
+    document.getElementById('artistsCardTitle').textContent = 'Semua Artis';
+    document.getElementById('artistsCardSearch').placeholder = 'Cari artis...';
+    document.getElementById('artistsCardSearch').value = '';
+    document.getElementById('artistsBackBtn').onclick = closeArtistsCard;
+    renderArtistsCard();
+    return;
+  }
+  const page = document.getElementById('artistsCardPage');
+  page.classList.remove('open');
+  setTimeout(() => { page.style.display = 'none'; }, 350);
+}
+
+function renderArtistsCard(keyword = '') {
+  const list = document.getElementById('artistsCardList');
+  list.innerHTML = '';
+  const filtered = artists.filter(a => a.name.toLowerCase().includes(keyword.toLowerCase()));
+  const grid = document.createElement('div');
+  grid.className = 'artist-grid';
+  filtered.forEach(artist => {
+    const item = document.createElement('div');
+    item.className = 'artist-grid-item';
+    item.innerHTML = `<img class="artist-grid-img" src="${artist.cover}" alt=""><div class="artist-grid-name">${artist.name}</div>`;
+    item.onclick = () => showArtistSongs(artist);
+    grid.appendChild(item);
+  });
+  list.appendChild(grid);
+}
+
+function showArtistSongs(artist) {
+  artistsViewMode = 'songs';
+  artistsViewArtist = artist;
+  document.getElementById('artistsCardTitle').textContent = artist.name;
+  document.getElementById('artistsCardSearch').placeholder = 'Cari lagu...';
+  document.getElementById('artistsCardSearch').value = '';
+  document.getElementById('artistsBackBtn').onclick = () => {
+    artistsViewMode = 'list';
+    artistsViewArtist = null;
+    document.getElementById('artistsCardTitle').textContent = 'Semua Artis';
+    document.getElementById('artistsCardSearch').placeholder = 'Cari artis...';
+    document.getElementById('artistsCardSearch').value = '';
+    document.getElementById('artistsBackBtn').onclick = closeArtistsCard;
+    renderArtistsCard();
+  };
+  renderArtistSongsInCard(artist);
+
+  // Ensure artists card is open
+  const page = document.getElementById('artistsCardPage');
+  if (!page.classList.contains('open')) {
+    page.style.display = 'flex';
+    setTimeout(() => page.classList.add('open'), 10);
+  }
+}
+
+function renderArtistSongsInCard(artist, keyword = '') {
+  const list = document.getElementById('artistsCardList');
+  list.innerHTML = '';
+  const artistSongs = songs.filter(s =>
+    s.artist === artist.name &&
+    s.title.toLowerCase().includes(keyword.toLowerCase())
+  );
+  artistSongs.forEach((song, i) => {
+    const idx = songs.indexOf(song);
+    list.appendChild(createSongItem(song, idx, { showNum: true, num: i + 1, songList: artistSongs.map(s => songs.indexOf(s)).map(i => songs[i]) }));
+  });
+}
+
+// ===== SEARCH =====
+function handleSearch(keyword) {
+  const browse = document.getElementById('searchBrowse');
+  const results = document.getElementById('searchResults');
+
+  if (!keyword.trim()) {
+    browse.style.display = 'block';
+    results.style.display = 'none';
+    return;
+  }
+
+  browse.style.display = 'none';
+  results.style.display = 'block';
+  results.innerHTML = '';
+
+  const kw = keyword.toLowerCase();
+  const filteredSongs = songs.filter(s => s.title.toLowerCase().includes(kw) || s.artist.toLowerCase().includes(kw));
+  const filteredArtists = artists.filter(a => a.name.toLowerCase().includes(kw));
+
+  if (filteredSongs.length) {
+    const sec = document.createElement('div');
+    sec.className = 'results-section';
+    sec.innerHTML = '<div class="results-title">Lagu</div>';
+    filteredSongs.forEach(song => {
+      const idx = songs.indexOf(song);
+      sec.appendChild(createSongItem(song, idx));
+    });
+    results.appendChild(sec);
+  }
+
+  if (filteredArtists.length) {
+    const sec = document.createElement('div');
+    sec.className = 'results-section';
+    sec.innerHTML = '<div class="results-title">Artis</div>';
+    const grid = document.createElement('div');
+    grid.className = 'artist-grid';
+    filteredArtists.forEach(artist => {
+      const item = document.createElement('div');
+      item.className = 'artist-grid-item';
+      item.innerHTML = `<img class="artist-grid-img" src="${artist.cover}" alt=""><div class="artist-grid-name">${artist.name}</div>`;
+      item.onclick = () => { openArtistsCard(); showArtistSongs(artist); };
+      grid.appendChild(item);
+    });
+    sec.appendChild(grid);
+    results.appendChild(sec);
+  }
+
+  if (!filteredSongs.length && !filteredArtists.length) {
+    results.innerHTML = `<div class="empty-state"><span class="empty-icon">🔍</span><div class="empty-title">Tidak ditemukan</div><div class="empty-text">Coba kata kunci lain</div></div>`;
+  }
+}
+
+// ===== COLLECTION =====
+function filterCollection(type, btn) {
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderCollection(type);
+}
+
+function renderCollection(type) {
+  const list = document.getElementById('collectionList');
+  list.innerHTML = '';
+  const filtered = type === 'fav' ? songs.filter(s => favorites.includes(s.title)) : songs;
+
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty-state"><span class="empty-icon">💚</span><div class="empty-title">Belum ada favorit</div><div class="empty-text">Tekan ikon 🤍 untuk menambah favorit</div></div>`;
+    return;
+  }
+
+  filtered.forEach((song, i) => {
+    const idx = songs.indexOf(song);
+    list.appendChild(createSongItem(song, idx, { showNum: true, num: i + 1 }));
+  });
+}
+
+// ===== FAVORITES =====
+function toggleFav(title, btn) {
+  if (favorites.includes(title)) {
+    favorites = favorites.filter(f => f !== title);
+    btn.textContent = '🤍';
+    btn.classList.remove('active');
+  } else {
+    favorites.push(title);
+    btn.textContent = '💚';
+    btn.classList.add('active');
+  }
+  localStorage.setItem('yrm_favs', JSON.stringify(favorites));
+  updateNpFavBtn();
+}
+
+function toggleFavFromPlayer() {
+  if (currentIndex < 0) return;
+  const song = songs[currentIndex];
+  const isFav = favorites.includes(song.title);
+  if (isFav) {
+    favorites = favorites.filter(f => f !== song.title);
+  } else {
+    favorites.push(song.title);
+  }
+  localStorage.setItem('yrm_favs', JSON.stringify(favorites));
+  updateNpFavBtn();
+  refreshAllFavBtns();
+}
+
+function updateNpFavBtn() {
+  if (currentIndex < 0) return;
+  const btn = document.getElementById('npFavBtn');
+  btn.textContent = favorites.includes(songs[currentIndex].title) ? '💚' : '🤍';
+}
+
+function refreshAllFavBtns() {
+  document.querySelectorAll('.song-item-fav').forEach(btn => {
+    const item = btn.closest('.song-item');
+    const idx = parseInt(item.dataset.songIndex);
+    if (isNaN(idx)) return;
+    const song = songs[idx];
+    if (!song) return;
+    const isFav = favorites.includes(song.title);
+    btn.textContent = isFav ? '💚' : '🤍';
+    btn.classList.toggle('active', isFav);
+  });
+}
+
+// ===== PLAYER =====
+function playSong(index) {
+  currentIndex = index;
+  const song = songs[index];
+
+  player.src = song.file;
+  player.play().catch(() => {});
+  isPlaying = true;
+
+  updateNowPlayingUI(song);
+  updateMiniPlayer(song);
+  updatePlayBtns();
+  updateActiveItems();
+
+  document.getElementById('miniPlayer').classList.add('visible');
+}
+
+function updateNowPlayingUI(song) {
+  document.getElementById('npCover').src = song.cover;
+  document.getElementById('npTitle').textContent = song.title;
+  document.getElementById('npArtist').textContent = song.artist;
+  document.getElementById('npContext').textContent = song.artist.toUpperCase();
+
+  const bgBlur = document.getElementById('npBgBlur');
+  bgBlur.style.backgroundImage = `url(${song.cover})`;
+
+  document.getElementById('npCover').className = 'np-cover playing';
+  updateNpFavBtn();
+
+  // Lyrics
+  const lyricsEl = document.getElementById('npLyrics');
+  lyricsEl.innerHTML = '';
+  lyricEls = [];
+  currentLyrics = song.lyrics || [];
+
+  if (currentLyrics.length) {
+    currentLyrics.forEach(l => {
+      const el = document.createElement('div');
+      el.className = 'lyric-line';
+      el.textContent = l.text;
+      el.onclick = () => { player.currentTime = l.time; };
+      lyricsEl.appendChild(el);
+      lyricEls.push(el);
+    });
+  } else {
+    lyricsEl.innerHTML = '<div class="no-lyrics">Lirik belum tersedia</div>';
+  }
+}
+
+function updateMiniPlayer(song) {
+  document.getElementById('miniCover').src = song.cover;
+  document.getElementById('miniTitle').textContent = song.title;
+  document.getElementById('miniArtist').textContent = song.artist;
+}
+
+function updatePlayBtns() {
+  const icons = {
+    play: `<path d="M8 5v14l11-7z"/>`,
+    pause: `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`
+  };
+  const icon = isPlaying ? icons.pause : icons.play;
+
+  document.getElementById('miniPlayIcon').innerHTML = icon;
+  document.getElementById('npPlayIcon').innerHTML = icon;
+
+  const npCover = document.getElementById('npCover');
+  npCover.className = 'np-cover ' + (isPlaying ? 'playing' : 'paused');
+}
+
+function updateActiveItems() {
+  document.querySelectorAll('.song-item').forEach(el => {
+    const idx = parseInt(el.dataset.songIndex);
+    el.classList.toggle('playing', idx === currentIndex);
+  });
+}
+
+function togglePlay() {
+  if (currentIndex < 0) return;
+  if (isPlaying) {
+    player.pause();
+    isPlaying = false;
+  } else {
+    player.play().catch(() => {});
+    isPlaying = true;
+  }
+  updatePlayBtns();
+}
+
+function nextSong() {
+  if (currentIndex < 0) return;
+  let next;
+  if (shuffle) {
+    next = Math.floor(Math.random() * songs.length);
+  } else {
+    next = (currentIndex + 1) % songs.length;
+  }
+  playSong(next);
+}
+
+function prevSong() {
+  if (currentIndex < 0) return;
+  if (player.currentTime > 3) {
+    player.currentTime = 0;
+    return;
+  }
+  const prev = (currentIndex - 1 + songs.length) % songs.length;
+  playSong(prev);
+}
+
+function onSongEnd() {
+  if (repeat) {
+    player.currentTime = 0;
+    player.play().catch(() => {});
+  } else {
+    nextSong();
+  }
+}
+
+function toggleShuffle() {
+  shuffle = !shuffle;
+  const btn = document.getElementById('shuffleBtn');
+  btn.style.color = shuffle ? 'var(--green)' : 'var(--text-dim)';
+}
+
+function toggleRepeat() {
+  repeat = !repeat;
+  const btn = document.getElementById('repeatBtn');
+  btn.style.color = repeat ? 'var(--green)' : 'var(--text-dim)';
+}
+
+// ===== TIME UPDATE =====
+function onTimeUpdate() {
+  if (!player.duration) return;
+  const pct = (player.currentTime / player.duration) * 100;
+
+  document.getElementById('npProgressFill').style.width = pct + '%';
+  document.getElementById('miniProgress').style.width = pct + '%';
+
+  document.getElementById('npCurrent').textContent = formatTime(player.currentTime);
+
+  // Lyrics sync
+  if (!currentLyrics.length) return;
+  let active = -1;
+  for (let i = 0; i < currentLyrics.length; i++) {
+    if (player.currentTime >= currentLyrics[i].time) active = i;
+    else break;
+  }
+
+  lyricEls.forEach((el, i) => {
+    if (i === active) {
+      el.classList.add('active');
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      el.classList.remove('active');
+    }
+  });
+}
+
+function updateDuration() {
+  document.getElementById('npDuration').textContent = formatTime(player.duration);
+}
+
+function formatTime(s) {
+  if (!s || isNaN(s)) return '0:00';
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+
+// ===== NAVIGATION =====
+function showPage(page) {
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(page + 'Page').classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(page + 'NavBtn').classList.add('active');
+  document.getElementById('scrollArea').scrollTo({ top: 0 });
+
+  if (page === 'collection') renderCollection('all');
+}
+
+function openNowPlaying() {
+  document.getElementById('nowPlayingScreen').classList.add('open');
+  npOpen = true;
+}
+
+function closeNowPlaying() {
+  document.getElementById('nowPlayingScreen').classList.remove('open');
+  npOpen = false;
+}
+
+// ===== START =====
+init();
+</script>
+</body>
+</html>
